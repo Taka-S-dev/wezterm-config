@@ -1,0 +1,20 @@
+# 許可リスト方式: いったん全部無視し、リポジトリの構成ファイルだけ戻す
+*
+!.gitignore
+!.gitattributes
+!LICENSE
+!README.md
+!install.ps1
+!wezterm.lua
+!docs/
+!docs/**
+
+# 許可の後ろで機密・ローカル設定を再拒否（断片一致は使わず名前で指定）
+*.bak
+.wezterm.local.lua
+.env
+.env.*
+secrets.*
+credentials.*
+*.pem
+id_rsa*

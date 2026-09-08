@@ -1,0 +1,127 @@
+# wezterm-config
+
+Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm/) 設定です。
+キーを覚えていなくてもコマンドパレットとマウスで一通り操作できることを優先しています。
+
+## 特徴
+
+- **コマンドパレット中心の操作**。`Ctrl+Shift+P` でペイン / タブ / シェル / 表示 / 設定のグループが出て、Enter でその中の操作一覧が開きます。英字（`split`、`tab`、`close` など）で絞り込めます
+- **簡易ヘルプ**。`Ctrl+Shift+H` で頻出キーだけを画面に表示します
+- **GUI 操作**。タブの × と ＋、＋の右クリックでシェル選択、スクロールバー、右クリック貼り付け、ドラッグ選択で自動コピー、Ctrl+ホイールで文字サイズ変更
+- **ペイン**。左右 / 上下分割、シェルを選んで分割、`Alt+矢印` または `Alt+h/j/k/l` で移動、番号で移動・入れ替え、最大化、3ペインの IDE 風レイアウト
+- **タブ**。作業ディレクトリ名と前面プロセスのアイコンを表示。別タブに新しい出力があると印が付きます
+- **workspace**。プロジェクト単位の作業空間の作成と切り替え
+- **完了通知**。フォーカス外のペインでベルが鳴ると OS の通知を出します（長いビルドやテストの終了を別タブで待つときに）
+- **Neovim 連携**。`file.ts:42` 形式のパスを Ctrl+クリックすると既存の Neovim で開きます。`Alt+h/j/k/l` は Neovim 内では Neovim に渡します
+- **環境対応**。リモートデスクトップ接続時は描画を軽量化。Windows 以外でも動作します
+- **配色**。Catppuccin Mocha。半透明 + Acrylic
+
+## インストール
+
+1. WezTerm をインストールします
+
+   ```powershell
+   winget install wez.wezterm
+   ```
+
+2. `wezterm.lua` をホームディレクトリに `.wezterm.lua` として置きます
+
+   ```powershell
+   git clone https://github.com/Taka-S-dev/wezterm-config.git
+   cd wezterm-config
+   .\install.ps1
+   ```
+
+   `install.ps1` はファイルをコピーするだけです。手動なら `Copy-Item wezterm.lua ~\.wezterm.lua` で同じです。
+
+3. フォントを入れます（任意）
+
+   ```powershell
+   winget install DEVCOM.JetBrainsMonoNerdFont
+   ```
+
+   無くても動きます。その場合は Cascadia Mono か Consolas に落ち、アイコンは WezTerm 内蔵の記号で表示されます。
+   日本語は Windows 標準の BIZ UDGothic を使います。Windows 以外では Noto Sans JP など等幅の日本語フォントを入れてください。
+
+## 最初に覚えるキー
+
+| キー | 動作 |
+|---|---|
+| `Ctrl+Shift+P` | コマンドパレット。迷ったらこれ |
+| `Ctrl+Shift+H` | 簡易ヘルプ |
+| `Ctrl+Shift+T` | 新しいタブ |
+| `Ctrl+Shift+D` | ペインを左右に分割 |
+| `Ctrl+Shift+E` | ペインを上下に分割 |
+| `Alt+矢印` | ペイン移動（クリックでも可） |
+| `Alt+1`〜`9` | タブ番号で切り替え |
+| `Ctrl+Shift+F` | 画面内を検索 |
+| 右クリック | 貼り付け |
+
+分割キーに `Alt` を足す（`Ctrl+Shift+Alt+D` など）と、シェルを選んでから分割します。
+
+### Leader キー（tmux 風）
+
+`Ctrl+q` を押してから 1 秒以内に次のキーを押します。慣れるまでは不要です。
+
+| キー | 動作 |
+|---|---|
+| `\|` / `-` | 左右 / 上下に分割 |
+| `h` `j` `k` `l` | ペイン移動 |
+| `r` | サイズ変更モード（h/j/k/l か矢印、Esc で終了） |
+| `z` | ペイン最大化 / 元に戻す |
+| `x` | ペインを閉じる |
+| `o` | ペインの配置を回転 |
+| `S` | 番号で選んでペイン入れ替え |
+| `i` | IDE 風レイアウト（メイン + サブ + 下にターミナル） |
+| `c` / `n` / `p` / `,` | タブの新規 / 次 / 前 / 名前変更 |
+| `w` / `W` | workspace の切り替え / 新規作成 |
+| `s` | シェル / workspace のランチャー |
+| `[` / `Space` / `f` | コピーモード / クイック選択 / 検索 |
+| `R` | 設定を再読み込み |
+| `?` | 簡易ヘルプ |
+| `Ctrl+q` | 本来の Ctrl+q をアプリに送る |
+
+全キーバインドは `wezterm show-keys`、またはパレットの「keys help」で確認できます。
+
+## カスタマイズ
+
+- **マシン固有の設定**は `~/.wezterm.local.lua` に書きます。存在すれば自動で読み込まれ、リポジトリには含まれません
+
+  ```lua
+  return function(config)
+    table.insert(config.ssh_domains, {
+      name = "server",
+      remote_address = "192.168.1.10",
+      username = "me",
+      multiplexing = "WezTerm",
+    })
+  end
+  ```
+
+- **パレットの項目**は `PALETTE_GROUPS` に 1 行足すと、グループのサブメニューと個別項目の両方に出ます
+- **簡易ヘルプの内容**は `HELP_LINES` を編集します
+- **既定のシェル**は `default_prog`、＋ボタンのメニューは `launch_menu` です
+- **半透明が不要**なら `window_background_opacity` の周辺を削除します
+
+## Neovim へのジャンプを使う
+
+Neovim 側でサーバーを起動しておくと、Ctrl+クリックで既存のインスタンスにファイルが開きます。init.lua に次を追加します。
+
+```lua
+-- Windows
+vim.fn.serverstart([[\\.\pipe\nvim-wezterm]])
+-- macOS / Linux
+vim.fn.serverstart("/tmp/nvim-wezterm.sock")
+```
+
+サーバーが無い場合は右側に新しい Neovim のペインが開きます。
+
+## 動作確認環境
+
+- WezTerm 20240203-110809-5046fc22
+- Windows 11
+- PowerShell 7
+
+## License
+
+MIT
