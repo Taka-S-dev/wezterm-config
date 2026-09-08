@@ -15,6 +15,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 - **Neovim 連携**。`file.ts:42` 形式のパスを Ctrl+クリックすると既存の Neovim で開きます。`Alt+h/j/k/l` は Neovim 内では Neovim に渡します
 - **環境対応**。リモートデスクトップ接続時は描画を軽量化。Windows 以外でも動作します
 - **配色**。Catppuccin Mocha。半透明 + Acrylic
+- **常に最前面**。パレットの「always on top」で切り替え（Windows のみ）
 
 ## インストール
 

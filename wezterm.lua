@@ -532,6 +532,74 @@ config.key_tables = {
 }
 
 --------------------------------------------------------------------------------
+-- 常に最前面の切り替え（Windows のみ）
+-- WezTerm 本体に機能が無いので、WezTerm のウィンドウをクラス名で探して Win32 API を呼ぶ。
+-- 複数ウィンドウがある場合は前面のものだけ、判別できなければ全部に適用する。
+--------------------------------------------------------------------------------
+
+local TOPMOST_SCRIPT = [[
+Add-Type -Namespace W -Name U -MemberDefinition @"
+public delegate bool EnumProc(IntPtr h, IntPtr l);
+[DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc p, IntPtr l);
+[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
+[DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);
+"@
+$wins = New-Object System.Collections.Generic.List[IntPtr]
+[W.U]::EnumWindows({ param($h, $l)
+  if ([W.U]::IsWindowVisible($h)) {
+    $sb = New-Object System.Text.StringBuilder 256
+    [void][W.U]::GetClassName($h, $sb, 256)
+    if ($sb.ToString() -eq "org.wezfurlong.wezterm") { $wins.Add($h) }
+  }
+  $true
+}, [IntPtr]::Zero) | Out-Null
+$fg = [W.U]::GetForegroundWindow()
+$targets = if ($wins.Contains($fg)) { @($fg) } else { $wins }
+$after = if ($args[0] -eq "on") { [IntPtr]::new(-1) } else { [IntPtr]::new(-2) }
+foreach ($h in $targets) { [W.U]::SetWindowPos($h, $after, 0, 0, 0, 0, 0x0003) | Out-Null }
+]]
+
+-- -Command に本文と引数を同時に渡すと引数が本文に連結されて壊れるので、
+-- 一時ファイルに書き出して -File で呼ぶ
+local function write_topmost_script()
+  local dir = os.getenv("TEMP") or os.getenv("TMP") or wezterm.home_dir
+  local path = dir .. "/wezterm-topmost.ps1"
+  local f = io.open(path, "w")
+  if not f then
+    return nil
+  end
+  f:write(TOPMOST_SCRIPT)
+  f:close()
+  return path
+end
+
+wezterm.on("toggle-always-on-top", function(window, pane)
+  if not is_windows then
+    window:toast_notification("WezTerm", "常に最前面は Windows のみ対応です", nil, 3000)
+    return
+  end
+  local script = write_topmost_script()
+  if not script then
+    window:toast_notification("WezTerm", "常に最前面: スクリプトを書き出せませんでした", nil, 4000)
+    return
+  end
+  local on = not wezterm.GLOBAL.always_on_top
+  local ok, _, stderr = wezterm.run_child_process({
+    "powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+    "-WindowStyle", "Hidden", "-File", script, on and "on" or "off",
+  })
+  if not ok then
+    wezterm.log_error("always-on-top failed: " .. tostring(stderr))
+    window:toast_notification("WezTerm", "常に最前面: 切り替えに失敗しました（Ctrl+Shift+L でログ確認）", nil, 4000)
+    return
+  end
+  wezterm.GLOBAL.always_on_top = on
+  window:toast_notification("WezTerm", on and "常に最前面: ON" or "常に最前面: OFF", nil, 2000)
+end)
+
+--------------------------------------------------------------------------------
 -- コマンドパレット（Ctrl+Shift+P）
 --
 -- 操作をグループにまとめてある。パレットで pane / tab / shell / view と打つと
@@ -590,6 +658,7 @@ local PALETTE_GROUPS = {
       { "クイック選択（パスやハッシュを1キーでコピー）", "quick select", act.QuickSelect, "Ctrl+q Space" },
       { "スクロールバック全体をクリア", "clear", act.ClearScrollback("ScrollbackAndViewport"), "" },
       { "文字サイズを元に戻す", "reset font", act.ResetFontSize, "Ctrl+0" },
+      { "常に最前面を切り替え（Windows）", "always on top", act.EmitEvent("toggle-always-on-top"), "" },
     },
   },
   {
@@ -753,6 +822,10 @@ wezterm.on("update-right-status", function(window, pane)
   local key_table = window:active_key_table()
   if key_table then
     table.insert(segments, { text = " " .. key_table:upper() .. " ", fg = C.crust, bg = C.yellow, bold = true })
+  end
+
+  if wezterm.GLOBAL.always_on_top then
+    table.insert(segments, { text = " " .. wezterm.nerdfonts.md_pin .. " 最前面 ", fg = C.crust, bg = C.peach })
   end
 
   local ws = window:active_workspace()
