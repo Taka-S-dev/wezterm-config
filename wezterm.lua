@@ -828,9 +828,36 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(segments, { text = " " .. wezterm.nerdfonts.md_pin .. " 最前面 ", fg = C.crust, bg = C.peach })
   end
 
+  -- ズーム中は隠れているペインがあることを出す（例: 1/3 ペイン）
+  local tab = window:active_tab()
+  if tab then
+    local panes = tab:panes_with_info()
+    for _, info in ipairs(panes) do
+      if info.is_zoomed then
+        table.insert(segments, {
+          text = string.format(" %s ズーム中 1/%d ペイン ", wezterm.nerdfonts.md_magnify, #panes),
+          fg = C.crust, bg = C.yellow, bold = true,
+        })
+        break
+      end
+    end
+  end
+
+  -- workspace が複数あるときは、default にいても現在地と総数を出す（例: main (1/3)）
   local ws = window:active_workspace()
-  if ws and ws ~= "default" then
-    table.insert(segments, { text = " " .. wezterm.nerdfonts.cod_window .. " " .. ws .. " ", fg = C.crust, bg = C.teal })
+  local names = wezterm.mux.get_workspace_names()
+  if ws and (#names > 1 or ws ~= "default") then
+    local index = 0
+    for i, name in ipairs(names) do
+      if name == ws then
+        index = i
+      end
+    end
+    local text = " " .. wezterm.nerdfonts.cod_window .. " " .. ws
+    if #names > 1 then
+      text = text .. string.format(" (%d/%d)", index, #names)
+    end
+    table.insert(segments, { text = text .. " ", fg = C.crust, bg = C.teal })
   end
 
   -- 作業ディレクトリはタブ名に、時刻は OS のタスクバーにあるので出さない
