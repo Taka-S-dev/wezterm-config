@@ -322,8 +322,15 @@ end)
 --   |        terminal              |
 --   +------------------------------+
 local function build_ide_layout(window, pane)
-  local bottom = pane:split({ direction = "Bottom", size = 0.25 })
-  pane:split({ direction = "Right", size = 0.28 })
+  -- 全ペインを元ペインの現在ディレクトリで開く（シェル側の OSC 7 通知が前提）
+  local cwd = pane:get_current_working_dir()
+  local cwd_path = cwd and cwd.file_path or nil
+  -- Windows では "/C:/Users/..." の形で返るので先頭のスラッシュを落とす
+  if cwd_path and cwd_path:match("^/%a:") then
+    cwd_path = cwd_path:sub(2)
+  end
+  local bottom = pane:split({ direction = "Bottom", size = 0.25, cwd = cwd_path })
+  pane:split({ direction = "Right", size = 0.28, cwd = cwd_path })
   window:perform_action(act.ActivatePaneDirection("Up"), bottom)
 end
 wezterm.on("ide-layout", build_ide_layout)
