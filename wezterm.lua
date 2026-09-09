@@ -486,6 +486,7 @@ config.keys = {
   { key = "z", mods = "LEADER", action = act.TogglePaneZoomState },
   { key = "t", mods = "LEADER", action = act.TogglePaneZoomState },
   { key = "x", mods = "LEADER", action = act.CloseCurrentPane({ confirm = true }) },
+  { key = "X", mods = "LEADER|SHIFT", action = act.EmitEvent("close-other-panes") },
   { key = "o", mods = "LEADER", action = act.RotatePanes("Clockwise") },
   { key = "S", mods = "LEADER|SHIFT", action = act.PaneSelect({ mode = "SwapWithActive" }) },
 
@@ -600,6 +601,45 @@ wezterm.on("toggle-always-on-top", function(window, pane)
 end)
 
 --------------------------------------------------------------------------------
+-- アクティブ以外のペインをまとめて閉じる（確認あり）
+--------------------------------------------------------------------------------
+
+wezterm.on("close-other-panes", function(window, pane)
+  local tab = window:active_tab()
+  if not tab then
+    return
+  end
+  local others = {}
+  for _, p in ipairs(tab:panes()) do
+    if p:pane_id() ~= pane:pane_id() then
+      table.insert(others, p)
+    end
+  end
+  if #others == 0 then
+    window:toast_notification("WezTerm", "このタブにはほかのペインがありません", nil, 2000)
+    return
+  end
+  window:perform_action(
+    act.InputSelector({
+      title = string.format("ほかの %d ペインを閉じますか？", #others),
+      choices = {
+        { id = "yes", label = "閉じる" },
+        { id = "no", label = "やめる" },
+      },
+      action = wezterm.action_callback(function(win, _, id)
+        if id ~= "yes" then
+          return
+        end
+        for _, p in ipairs(others) do
+          win:perform_action(act.CloseCurrentPane({ confirm = false }), p)
+        end
+      end),
+    }),
+    pane
+  )
+end)
+
+--------------------------------------------------------------------------------
 -- コマンドパレット（Ctrl+Shift+P）
 --
 -- 操作をグループにまとめてある。パレットで pane / tab / shell / view と打つと
@@ -630,6 +670,7 @@ local PALETTE_GROUPS = {
       { "配置を回転", "rotate", act.RotatePanes("Clockwise"), "Ctrl+q o" },
       { "IDE風レイアウト（メイン + サブ + 下にターミナル）", "ide layout", act.EmitEvent("ide-layout"), "Ctrl+q i" },
       { "閉じる", "close pane", act.CloseCurrentPane({ confirm = true }), "Ctrl+q x" },
+      { "ほかのペインをすべて閉じる", "close other panes", act.EmitEvent("close-other-panes"), "Ctrl+q X" },
     },
   },
   {

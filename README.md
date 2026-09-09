@@ -72,6 +72,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `r` | サイズ変更モード（h/j/k/l か矢印、Esc で終了） |
 | `z` | ペイン最大化 / 元に戻す |
 | `x` | ペインを閉じる |
+| `X` | ほかのペインをすべて閉じる（確認あり） |
 | `o` | ペインの配置を回転 |
 | `S` | 番号で選んでペイン入れ替え |
 | `i` | IDE 風レイアウト（メイン + サブ + 下にターミナル） |
