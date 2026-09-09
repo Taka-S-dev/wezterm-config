@@ -361,9 +361,12 @@ local function build_ide_layout(window, pane)
   if cwd_path and cwd_path:match("^/%a:") then
     cwd_path = cwd_path:sub(2)
   end
-  local bottom = pane:split({ direction = "Bottom", size = 0.25, cwd = cwd_path })
+  pane:split({ direction = "Bottom", size = 0.25, cwd = cwd_path })
   pane:split({ direction = "Right", size = 0.28, cwd = cwd_path })
-  window:perform_action(act.ActivatePaneDirection("Up"), bottom)
+  -- 分割のたびにフォーカスが新しいペインへ移るので、最後に元のペインへ戻す。
+  -- 下ペインから "Up" で戻す方式は、下ペインが全幅のためメインと右のどちらに
+  -- 行くかがカーソル位置に左右されるので使わない。
+  pane:activate()
 end
 wezterm.on("ide-layout", build_ide_layout)
 
