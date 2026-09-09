@@ -119,6 +119,29 @@ vim.fn.serverstart("/tmp/nvim-wezterm.sock")
 
 サーバーが無い場合は右側に新しい Neovim のペインが開きます。
 
+## 新しいペインを今いるディレクトリで開く
+
+分割や IDE 風レイアウトで開くペインは、元のペインの作業ディレクトリを引き継ぎます。そのためにはシェルが現在地を WezTerm に通知している（OSC 7）必要があり、通知が無いと新しいペインはホームディレクトリで開きます。タブに出る作業ディレクトリ名も同じ通知を使います。
+
+PowerShell では `$PROFILE` に次を足します。
+
+```powershell
+if ($env:WEZTERM_PANE) {
+    $script:WezOrigPrompt = $function:prompt
+    function prompt {
+        $loc = $ExecutionContext.SessionState.Path.CurrentLocation
+        if ($loc.Provider.Name -eq 'FileSystem') {
+            $esc  = [char]27
+            $path = [uri]::EscapeUriString(($loc.ProviderPath -replace '\\', '/'))
+            $Host.UI.Write("$esc]7;file://$env:COMPUTERNAME/$path$esc\")
+        }
+        & $script:WezOrigPrompt
+    }
+}
+```
+
+bash / zsh は WezTerm 同梱の [shell integration](https://wezterm.org/shell-integration.html) を読み込めば同じ通知が出ます。
+
 ## 動作確認環境
 
 - WezTerm 20240203-110809-5046fc22
