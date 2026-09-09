@@ -15,7 +15,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 - **完了通知**。フォーカス外のペインでベルが鳴ると OS の通知を出します（長いビルドやテストの終了を別タブで待つときに）
 - **Neovim 連携**。`file.ts:42` 形式のパスを Ctrl+クリックすると既存の Neovim で開きます。`Alt+h/j/k/l` は Neovim 内では Neovim に渡します
 - **環境対応**。リモートデスクトップ接続時は描画を軽量化。Windows 以外でも動作します
-- **配色**。Catppuccin Mocha。半透明 + Acrylic
+- **配色**。Catppuccin Mocha。半透明 + Acrylic。タブバーとステータスの色もスキームに追従します
 - **常に最前面**。パレットの「always on top」で切り替え（Windows のみ）
 
 ## インストール
@@ -101,6 +101,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
   end
   ```
 
+- **配色**は先頭付近の `SCHEME` を書き換えます（候補は `wezterm ls-schemes`）。タブバーとステータスの色はスキームから自動で決まります。Catppuccin Mocha は公式の補助色を `PALETTES` に持っていて、それ以外は背景色と ANSI 色から導出します。導出は暗い配色向けなので、明るいスキームではタブバーの階調が見づらいことがあります
 - **パレットの項目**は `PALETTE_GROUPS` に 1 行足すと、グループのサブメニューと個別項目の両方に出ます
 - **簡易ヘルプの内容**は `HELP_LINES` を編集します
 - **既定のシェル**は `default_prog`、＋ボタンのメニューは `launch_menu` です

@@ -82,27 +82,59 @@ config.warn_about_missing_glyphs = false
 -- 外観
 --------------------------------------------------------------------------------
 
-config.color_scheme = "Catppuccin Mocha"
+-- 配色はここだけで決める。タブバー・ステータスの色もこの名前から決まる。
+-- 候補は `wezterm ls-schemes`、または https://wezterm.org/colorschemes/
+local SCHEME = "Catppuccin Mocha"
+config.color_scheme = SCHEME
 
--- Catppuccin Mocha の主要色（タブバー・ステータス用）
-local C = {
-  base = "#1e1e2e",
-  mantle = "#181825",
-  crust = "#11111b",
-  surface0 = "#313244",
-  surface1 = "#45475a",
-  overlay0 = "#6c7086",
-  text = "#cdd6f4",
-  subtext0 = "#a6adc8",
-  blue = "#89b4fa",
-  lavender = "#b4befe",
-  mauve = "#cba6f7",
-  green = "#a6e3a1",
-  yellow = "#f9e2af",
-  peach = "#fab387",
-  red = "#f38ba8",
-  teal = "#94e2d5",
+-- タブバー・ステータス用の補助色。
+-- 本体の 16 色には無い階調（背景の一段暗い色など）を使うので、
+-- スキームが公式に定義しているものはここに書き、無いものは
+-- スキームの背景色と ANSI 色から導出する。
+local PALETTES = {
+  ["Catppuccin Mocha"] = {
+    base = "#1e1e2e", -- 選択中タブの背景
+    mantle = "#181825", -- ホバー・パレットの背景
+    crust = "#11111b", -- タブバーの地
+    surface1 = "#45475a", -- 分割線・スクロールバー
+    overlay0 = "#6c7086", -- 非選択タブの文字
+    subtext0 = "#a6adc8", -- 控えめな文字
+    text = "#cdd6f4", -- 通常の文字
+    lavender = "#b4befe", -- 選択中タブの文字
+    mauve = "#cba6f7", -- タブのアイコン
+    peach = "#fab387", -- 未読出力の印
+    red = "#f38ba8", -- LEADER 表示
+    yellow = "#f9e2af", -- キーテーブル・ズーム表示
+    teal = "#94e2d5", -- workspace 表示
+  },
 }
+
+local function derive_palette(name)
+  local s = wezterm.color.get_builtin_schemes()[name]
+  if not s then
+    return PALETTES["Catppuccin Mocha"]
+  end
+  local bg = wezterm.color.parse(s.background)
+  local fg = wezterm.color.parse(s.foreground)
+  -- ansi: 1=black 2=red 3=green 4=yellow 5=blue 6=magenta 7=cyan 8=white
+  return {
+    base = tostring(bg),
+    mantle = tostring(bg:darken(0.15)),
+    crust = tostring(bg:darken(0.3)),
+    surface1 = tostring(bg:lighten(0.15)),
+    overlay0 = s.brights[1],
+    subtext0 = tostring(fg:darken(0.2):desaturate(0.3)),
+    text = s.foreground,
+    lavender = s.brights[5],
+    mauve = s.ansi[6],
+    peach = s.brights[4],
+    red = s.ansi[2],
+    yellow = s.ansi[4],
+    teal = s.ansi[7],
+  }
+end
+
+local C = PALETTES[SCHEME] or derive_palette(SCHEME)
 
 config.colors = {
   tab_bar = {
