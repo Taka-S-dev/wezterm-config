@@ -84,7 +84,7 @@ config.warn_about_missing_glyphs = false
 
 -- 配色はここだけで決める。タブバー・ステータスの色もこの名前から決まる。
 -- 候補は `wezterm ls-schemes`、または https://wezterm.org/colorschemes/
-local SCHEME = "Catppuccin Mocha"
+local SCHEME = "Tokyo Night Moon"
 config.color_scheme = SCHEME
 
 -- タブバー・ステータス用の補助色。
