@@ -11,6 +11,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 - **ペイン**。左右 / 上下分割、シェルを選んで分割、`Alt+矢印` または `Alt+h/j/k/l` で移動、番号で移動・入れ替え、最大化、3ペインの IDE 風レイアウト
 - **タブ**。作業ディレクトリ名と前面プロセスのアイコンを表示。別タブに新しい出力があると印が付きます
 - **workspace**。プロジェクト単位の作業空間の作成と切り替え。複数あるときは右上に現在地と総数を表示
+- **ブックマークディレクトリ**。パレットの「add bookmark」でいまの場所を登録し、`Ctrl+Shift+O` で選ぶと、いまのペインでそのディレクトリへ移動します（PowerShell / cmd / Git Bash 対応）
 - **隠れているものの表示**。ペインを最大化中は右上に「ズーム中 1/N ペイン」と出るので、裏に他のペインがあることが分かります
 - **完了通知**。フォーカス外のペインでベルが鳴ると OS の通知を出します（長いビルドやテストの終了を別タブで待つときに）
 - **Neovim 連携**。`file.ts:42` 形式のパスを Ctrl+クリックすると既存の Neovim で開きます。`Alt+h/j/k/l` は Neovim 内では Neovim に渡します
@@ -57,6 +58,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `Alt+矢印` | ペイン移動（クリックでも可） |
 | `Alt+1`〜`9` | タブ番号で切り替え |
 | `Ctrl+Shift+F` | 画面内を検索 |
+| `Ctrl+Shift+O` | ブックマークのプロジェクトへ移動 |
 | 右クリック | 貼り付け |
 
 分割キーに `Alt` を足す（`Ctrl+Shift+Alt+D` など）と、シェルを選んでから分割します。
@@ -91,13 +93,21 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 - **マシン固有の設定**は `~/.wezterm.local.lua` に書きます。存在すれば自動で読み込まれ、リポジトリには含まれません
 
   ```lua
-  return function(config)
+  return function(config, local_opts)
+    -- SSH 接続先
     table.insert(config.ssh_domains, {
       name = "server",
       remote_address = "192.168.1.10",
       username = "me",
       multiplexing = "WezTerm",
     })
+    -- ブックマークディレクトリ（Ctrl+Shift+O）をまとめて登録したい場合。
+    -- 1 件ずつならパレットの「add bookmark」で追加でき、こちらは不要です
+    local_opts.bookmarks = {
+      { name = "myapp", path = "C:/src/myapp" },
+      { name = "notes", path = "~/Documents/notes" },
+    }
+    local_opts.bookmark_roots = { "~/src" }
   end
   ```
 

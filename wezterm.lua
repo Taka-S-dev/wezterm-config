@@ -9,7 +9,8 @@
 --   Ctrl+Shift+D  ペインを左右に分割    Ctrl+Shift+E  ペインを上下に分割
 --                 （Alt も足すとシェルを選んで分割）
 --   Alt+h/j/k/l   ペイン移動（Alt+矢印も可）   Alt+1〜9  タブ切り替え
---   Ctrl+Shift+F  検索                 右クリック     貼り付け
+--   Ctrl+Shift+F  検索                 Ctrl+Shift+O  ブックマークのプロジェクトへ移動
+--   右クリック     貼り付け
 --
 -- Leader キー（Ctrl+q）を押してからのキーは tmux 風のショートカット。
 -- 詳細はファイル内の「キーバインド」セクションを参照。
@@ -498,6 +499,7 @@ config.keys = {
   { key = "D", mods = "CTRL|SHIFT|ALT", action = act.EmitEvent("split-right-shell") },
   { key = "E", mods = "CTRL|SHIFT|ALT", action = act.EmitEvent("split-down-shell") },
   { key = "F", mods = "CTRL|SHIFT", action = act.Search({ CaseInSensitiveString = "" }) },
+  { key = "O", mods = "CTRL|SHIFT", action = act.EmitEvent("open-bookmark") },
   { key = "L", mods = "CTRL|SHIFT", action = act.ShowDebugOverlay },
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
@@ -682,6 +684,243 @@ wezterm.on("close-other-panes", function(window, pane)
 end)
 
 --------------------------------------------------------------------------------
+-- ブックマークディレクトリ（プロジェクトを選んで、いまのペインでそこへ cd する）
+--
+-- 追加はパレットの「add bookmark」でその場でできる（~/.wezterm-bookmarks.json に保存）。
+-- まとめて登録したい場合は ~/.wezterm.local.lua でも指定できる:
+--   return function(config, local_opts)
+--     local_opts.bookmarks = {
+--       { name = "myapp", path = "C:/src/myapp" },
+--       { name = "notes", path = "~/Documents/notes" },
+--     }
+--     -- このフォルダ直下のサブディレクトリを全部ブックマークにする
+--     local_opts.bookmark_roots = { "~/src" }
+--   end
+--------------------------------------------------------------------------------
+
+local local_opts = { bookmarks = {}, bookmark_roots = {} }
+
+-- パレットから追加した分の保存先
+local BOOKMARKS_FILE = wezterm.home_dir .. "/.wezterm-bookmarks.json"
+
+-- "~" を展開し、Windows で file URL 由来の "/C:/..." になっているパスを "C:/..." に直す
+local function normalize_path(path)
+  path = path:gsub("^~", wezterm.home_dir)
+  path = path:gsub("^/(%a:)", "%1")
+  path = path:gsub("([^/:])[/\\]+$", "%1")
+  return path
+end
+
+-- 現在の作業ディレクトリを文字列で返す
+local function pane_cwd(pane)
+  local cwd = pane:get_current_working_dir()
+  if cwd == nil then
+    return nil
+  end
+  local ok, path = pcall(function()
+    return cwd.file_path
+  end)
+  if ok and type(path) == "string" then
+    return normalize_path(path)
+  end
+  return normalize_path((tostring(cwd):gsub("^file://", "")))
+end
+
+local function load_saved_bookmarks()
+  local f = io.open(BOOKMARKS_FILE, "r")
+  if not f then
+    return {}
+  end
+  local text = f:read("*a")
+  f:close()
+  local ok, data = pcall(wezterm.json_parse, text)
+  if ok and type(data) == "table" then
+    return data
+  end
+  return {}
+end
+
+local function save_bookmarks(list)
+  local f = io.open(BOOKMARKS_FILE, "w")
+  if not f then
+    return false
+  end
+  f:write(wezterm.json_encode(list))
+  f:close()
+  return true
+end
+
+-- 保存ファイル + ローカル設定の個別指定 + ルートフォルダ走査 をまとめる
+local function collect_bookmarks()
+  local list = {}
+  for _, bm in ipairs(load_saved_bookmarks()) do
+    table.insert(list, { name = bm.name, path = normalize_path(bm.path), saved = true })
+  end
+  for _, bm in ipairs(local_opts.bookmarks) do
+    table.insert(list, { name = bm.name or basename(bm.path), path = normalize_path(bm.path) })
+  end
+  for _, root in ipairs(local_opts.bookmark_roots) do
+    local ok, entries = pcall(wezterm.read_dir, normalize_path(root))
+    if ok then
+      table.sort(entries)
+      for _, entry in ipairs(entries) do
+        local name = basename(entry)
+        if not name:match("^%.") then
+          table.insert(list, { name = name, path = entry })
+        end
+      end
+    end
+  end
+  return list
+end
+
+-- いまのディレクトリをブックマークに追加（名前を聞く。空なら末尾のフォルダ名）
+wezterm.on("add-bookmark", function(window, pane)
+  local cwd = pane_cwd(pane)
+  if not cwd then
+    window:toast_notification("WezTerm", "作業ディレクトリを取得できませんでした", nil, 3000)
+    return
+  end
+  window:perform_action(
+    act.PromptInputLine({
+      description = "ブックマークの名前（空なら " .. basename(cwd) .. "）: " .. cwd,
+      action = wezterm.action_callback(function(win, _, line)
+        if line == nil then
+          return
+        end
+        local name = #line > 0 and line or basename(cwd)
+        local list = load_saved_bookmarks()
+        for _, bm in ipairs(list) do
+          if bm.path == cwd then
+            win:toast_notification("WezTerm", "すでに登録済みです: " .. bm.name, nil, 3000)
+            return
+          end
+        end
+        table.insert(list, { name = name, path = cwd })
+        if save_bookmarks(list) then
+          win:toast_notification("WezTerm", "ブックマークに追加: " .. name, nil, 2000)
+        else
+          win:toast_notification("WezTerm", "保存に失敗しました: " .. BOOKMARKS_FILE, nil, 4000)
+        end
+      end),
+    }),
+    pane
+  )
+end)
+
+-- パレットから追加した分を選んで削除（ローカル設定由来のものは対象外）。
+-- 選択 UI は 1 件ずつしか選べないので、消したあと一覧を開き直して続けて消せる。
+-- Esc で終了。
+local function prompt_remove_bookmark(window, pane, removed_count)
+  local list = load_saved_bookmarks()
+  if #list == 0 then
+    if removed_count == 0 then
+      window:toast_notification("WezTerm", "削除できるブックマークがありません", nil, 2000)
+    end
+    return
+  end
+  local choices = {}
+  for i, bm in ipairs(list) do
+    table.insert(choices, { id = tostring(i), label = string.format("%s    %s", bm.name, bm.path) })
+  end
+  local title = "削除するブックマークを選択（続けて選べます。Esc で終了）"
+  if removed_count > 0 then
+    title = string.format("%d 件削除しました。続けて選択するか Esc で終了", removed_count)
+  end
+  window:perform_action(
+    act.InputSelector({
+      title = title,
+      choices = choices,
+      fuzzy = true,
+      action = wezterm.action_callback(function(win, p, id)
+        if not id then
+          return
+        end
+        table.remove(list, tonumber(id))
+        save_bookmarks(list)
+        prompt_remove_bookmark(win, p, removed_count + 1)
+      end),
+    }),
+    pane
+  )
+end
+
+wezterm.on("remove-bookmark", function(window, pane)
+  prompt_remove_bookmark(window, pane, 0)
+end)
+
+-- いまのペインのシェルで cd する。シェル以外（Neovim など）が前面なら新しいタブで開く
+local SHELLS = { pwsh = true, powershell = true, cmd = true, bash = true, zsh = true, sh = true, fish = true }
+
+local function detect_shell(pane)
+  local name = process_name(pane)
+  if SHELLS[name] then
+    return name
+  end
+  -- 前面プロセス名が取れない環境向けに、ペインのタイトル（既定はプロセス名）でも判定する
+  local title = (pane:get_title() or ""):lower():gsub("%.exe$", "")
+  if SHELLS[title] then
+    return title
+  end
+  return name
+end
+
+local function cd_in_pane(window, pane, path)
+  local shell = detect_shell(pane)
+  local cmd
+  if shell == "pwsh" or shell == "powershell" then
+    -- 自分で打ったように見える短い形にする。[ ] などワイルドカード文字を
+    -- 含むパスだけ -LiteralPath で保護する
+    local win_path = is_windows and (path:gsub("/", "\\")) or path
+    if win_path:find("[%[%]%*%?]") then
+      cmd = string.format('cd -LiteralPath "%s"', win_path)
+    else
+      cmd = string.format('cd "%s"', win_path)
+    end
+  elseif shell == "cmd" then
+    cmd = string.format('cd /d "%s"', (path:gsub("/", "\\")))
+  elseif shell == "bash" or shell == "zsh" or shell == "sh" or shell == "fish" then
+    -- Git Bash / MSYS 向けに C:/foo を /c/foo に直す
+    local posix = path:gsub("^(%a):", function(drive)
+      return "/" .. drive:lower()
+    end)
+    cmd = string.format('cd "%s"', posix)
+  else
+    window:perform_action(act.SpawnCommandInNewTab({ cwd = path }), pane)
+    return
+  end
+  pane:send_text(cmd .. "\r")
+end
+
+wezterm.on("open-bookmark", function(window, pane)
+  local bookmarks = collect_bookmarks()
+  if #bookmarks == 0 then
+    window:toast_notification("WezTerm", "ブックマークがありません。パレットの add bookmark で追加できます", nil, 4000)
+    return
+  end
+  local choices = {}
+  for i, bm in ipairs(bookmarks) do
+    table.insert(choices, { id = tostring(i), label = string.format("%s    %s", bm.name, bm.path) })
+  end
+  window:perform_action(
+    act.InputSelector({
+      title = "プロジェクトへ移動（いまのペインで cd）",
+      choices = choices,
+      fuzzy = true,
+      fuzzy_description = "プロジェクト名で絞り込み: ",
+      action = wezterm.action_callback(function(win, p, id)
+        if not id then
+          return
+        end
+        local bm = bookmarks[tonumber(id)]
+        cd_in_pane(win, p, bm.path)
+      end),
+    }),
+    pane
+  )
+end)
+
+--------------------------------------------------------------------------------
 -- コマンドパレット（Ctrl+Shift+P）
 --
 -- 操作をグループにまとめてある。パレットで pane / tab / shell / view と打つと
@@ -728,6 +967,9 @@ local PALETTE_GROUPS = {
   {
     key = "shell", label = "シェル / workspace", icon = "md_rocket_launch",
     items = {
+      { "ブックマークのプロジェクトへ移動", "project bookmark", act.EmitEvent("open-bookmark"), "Ctrl+Shift+O" },
+      { "いまのディレクトリをブックマークに追加", "add bookmark", act.EmitEvent("add-bookmark"), "" },
+      { "ブックマークから削除", "remove bookmark", act.EmitEvent("remove-bookmark"), "" },
       { "シェルを選んで新しいタブで起動", "launcher shell", launcher, "Ctrl+q s" },
       { "新しい workspace を作る", "new workspace", new_workspace, "Ctrl+q W" },
       { "workspace を切り替え", "switch workspace", act.ShowLauncherArgs({ flags = "FUZZY|WORKSPACES" }), "Ctrl+q w" },
@@ -961,11 +1203,12 @@ end)
 -- ローカル設定の読み込み
 -- SSH 接続先やマシン固有の設定は ~/.wezterm.local.lua に書く（git には入れない）。
 -- 例:
---   return function(config)
+--   return function(config, local_opts)
 --     table.insert(config.ssh_domains, {
 --       name = "desktop", remote_address = "192.168.1.10", username = "me",
 --       multiplexing = "WezTerm",
 --     })
+--     local_opts.bookmark_roots = { "~/src" }   -- ブックマークディレクトリ
 --   end
 --------------------------------------------------------------------------------
 
@@ -974,7 +1217,7 @@ local local_config = wezterm.home_dir .. "/.wezterm.local.lua"
 if file_exists(local_config) then
   local ok, apply = pcall(dofile, local_config)
   if ok and type(apply) == "function" then
-    apply(config)
+    apply(config, local_opts)
   elseif not ok then
     wezterm.log_error("wezterm.local.lua の読み込みに失敗: " .. tostring(apply))
   end
