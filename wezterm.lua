@@ -355,7 +355,8 @@ end)
 --   |        terminal              |
 --   +------------------------------+
 local function build_ide_layout(window, pane)
-  -- 全ペインを元ペインの現在ディレクトリで開く（シェル側の OSC 7 通知が前提）
+  -- 全ペインを元ペインの現在ディレクトリで開く
+  -- （現在地を推定できない環境では、シェル側の OSC 7 通知が無いとホームになる）
   local cwd = pane:get_current_working_dir()
   local cwd_path = cwd and cwd.file_path or nil
   -- Windows では "/C:/Users/..." の形で返るので先頭のスラッシュを落とす
@@ -774,34 +775,54 @@ local function collect_bookmarks()
   return list
 end
 
--- いまのディレクトリをブックマークに追加（名前を聞く。空なら末尾のフォルダ名）
-wezterm.on("add-bookmark", function(window, pane)
-  local cwd = pane_cwd(pane)
-  if not cwd then
-    window:toast_notification("WezTerm", "作業ディレクトリを取得できませんでした", nil, 3000)
-    return
-  end
+-- パスを確定したあと、名前を聞いて保存する
+local function prompt_bookmark_name(window, pane, path)
   window:perform_action(
     act.PromptInputLine({
-      description = "ブックマークの名前（空なら " .. basename(cwd) .. "）: " .. cwd,
+      description = "ブックマークの名前（空なら " .. basename(path) .. "）: " .. path,
       action = wezterm.action_callback(function(win, _, line)
         if line == nil then
           return
         end
-        local name = #line > 0 and line or basename(cwd)
+        local name = #line > 0 and line or basename(path)
         local list = load_saved_bookmarks()
         for _, bm in ipairs(list) do
-          if bm.path == cwd then
+          if bm.path == path then
             win:toast_notification("WezTerm", "すでに登録済みです: " .. bm.name, nil, 3000)
             return
           end
         end
-        table.insert(list, { name = name, path = cwd })
+        table.insert(list, { name = name, path = path })
         if save_bookmarks(list) then
           win:toast_notification("WezTerm", "ブックマークに追加: " .. name, nil, 2000)
         else
           win:toast_notification("WezTerm", "保存に失敗しました: " .. BOOKMARKS_FILE, nil, 4000)
         end
+      end),
+    }),
+    pane
+  )
+end
+
+-- いまのディレクトリをブックマークに追加（名前を聞く。空なら末尾のフォルダ名）。
+-- WezTerm が現在地を取得できない環境（プロセス情報を読めない、OSC 7 通知が無い）では
+-- タブを開いた場所（通常ホーム）が返ってくるので、その場合はパスを手で入力してもらう。
+wezterm.on("add-bookmark", function(window, pane)
+  local cwd = pane_cwd(pane)
+  local home = normalize_path(wezterm.home_dir)
+  if cwd and cwd ~= home then
+    prompt_bookmark_name(window, pane, cwd)
+    return
+  end
+  window:perform_action(
+    act.PromptInputLine({
+      description = "現在地を取得できませんでした（シェルが OSC 7 を出していない可能性）。登録するパスを入力（空ならホーム）: ",
+      action = wezterm.action_callback(function(win, p, line)
+        if line == nil then
+          return
+        end
+        local path = #line > 0 and normalize_path(line) or home
+        prompt_bookmark_name(win, p, path)
       end),
     }),
     pane
