@@ -221,7 +221,9 @@ end
 
 config.use_ime = true
 config.allow_win32_input_mode = true
-config.enable_kitty_keyboard = true
+-- kitty keyboard protocol は IME の確定文字列を送らず生のキーイベントだけを流すため、
+-- フルスクリーンの TUI で日本語入力が丸ごと落ちる。IME を使う間は無効にしておく。
+config.enable_kitty_keyboard = false
 
 config.window_close_confirmation = "NeverPrompt"
 config.skip_close_confirmation_for_processes_named = {
