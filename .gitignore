@@ -1,17 +1,22 @@
-# 許可リスト方式: いったん全部無視し、リポジトリの構成ファイルだけ戻す
+# 許可リスト方式: いったん全部無視し、リポジトリの構成ファイルだけ戻す。
+# 設定を複数ファイルに分けても追跡できるよう、ルート直下は拡張子で許可し、
+# 追加の文書は docs/ に置く。機密とローカル設定は許可の後ろで名前ごと再拒否する。
 *
+!*/
 !.gitignore
 !.gitattributes
 !LICENSE
 !README.md
-!install.ps1
-!wezterm.lua
-!docs/
+!CHANGELOG.md
+!*.lua
+!*.ps1
+!*.yml
 !docs/**
 
 # 許可の後ろで機密・ローカル設定を再拒否（断片一致は使わず名前で指定）
 *.bak
 .wezterm.local.lua
+wezterm.local.lua
 .env
 .env.*
 secrets.*
