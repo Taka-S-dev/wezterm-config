@@ -35,7 +35,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
    .\install.ps1
    ```
 
-   `install.ps1` はファイルをコピーするだけです。手動なら `Copy-Item wezterm.lua ~\.wezterm.lua` で同じです。
+   `install.ps1` がするのは設定のコピーと、足りない前提（WezTerm、PowerShell 7、フォント）の報告だけで、何かをインストールすることはありません。手動なら `Copy-Item wezterm.lua ~\.wezterm.lua` で同じです。
 
 3. フォントを入れます（任意）
 
