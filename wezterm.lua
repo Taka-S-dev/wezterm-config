@@ -468,6 +468,18 @@ local function smart_nav(key, dir)
   return { key = key, mods = "ALT", action = act.EmitEvent(event) }
 end
 
+-- Shift+Enter を改行にする。Windows の ConPTY は Shift+Enter を Enter と同じ CR に
+-- 変換してしまうので（kitty キープロトコルを有効にしても同じ）、改行を受け付ける
+-- TUI が前面のときは、両方が改行として解釈する "\" + Enter を送る。
+local NEWLINE_BY_BACKSLASH = { claude = true, copilot = true, node = true }
+wezterm.on("shift-enter", function(window, pane)
+  if NEWLINE_BY_BACKSLASH[process_name(pane)] then
+    pane:send_text("\\\r")
+  else
+    window:perform_action(act.SendKey({ key = "Enter" }), pane)
+  end
+end)
+
 local rename_tab = act.PromptInputLine({
   description = "タブ名を入力",
   action = wezterm.action_callback(function(window, pane, line)
@@ -505,6 +517,7 @@ config.keys = {
   { key = "O", mods = "CTRL|SHIFT", action = act.EmitEvent("open-bookmark") },
   { key = "L", mods = "CTRL|SHIFT", action = act.ShowDebugOverlay },
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
+  { key = "Enter", mods = "SHIFT", action = act.EmitEvent("shift-enter") },
 
   -- pane移動（Neovimと共存）。Alt+矢印でも同じ
   smart_nav("h", "Left"),
