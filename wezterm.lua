@@ -1074,7 +1074,7 @@ wezterm.on("augment-command-palette", function(window, pane)
   local entries = {}
   for _, group in ipairs(PALETTE_GROUPS) do
     table.insert(entries, {
-      brief = string.format("* %s  [%s]", group.label, group.key),
+      brief = string.format("* %s → 一覧を開く（%d 件）  [%s]", group.label, #group.items, group.key),
       icon = group.icon,
       action = group_menu(group),
     })
