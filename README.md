@@ -61,7 +61,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `Alt+1`〜`9` | タブ番号で切り替え |
 | `Ctrl+Shift+F` | 画面内を検索 |
 | `Ctrl+Shift+O` | ブックマークのプロジェクトへ移動 |
-| `Shift+Enter` | Claude Code / Copilot CLI で改行（`\` + Enter を送る） |
+| `Shift+Enter` | Claude Code / Copilot CLI / Codex CLI で改行（各 CLI が改行として受け付ける入力に変換） |
 | 右クリック | 貼り付け |
 
 分割キーに `Alt` を足す（`Ctrl+Shift+Alt+D` など）と、シェルを選んでから分割します。

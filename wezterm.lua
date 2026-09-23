@@ -469,15 +469,28 @@ local function smart_nav(key, dir)
 end
 
 -- Shift+Enter を改行にする。Windows の ConPTY は Shift+Enter を Enter と同じ CR に
--- 変換してしまうので（kitty キープロトコルを有効にしても同じ）、改行を受け付ける
--- TUI が前面のときは、両方が改行として解釈する "\" + Enter を送る。
-local NEWLINE_BY_BACKSLASH = { claude = true, copilot = true, node = true }
+-- 変換してしまうので（kitty キープロトコルを有効にしても同じ）、前面の TUI が
+-- 改行として解釈する入力を代わりに送る。それ以外では通常の Enter。
+-- 判定は前面プロセスのフルパスで行う。Codex は補助プロセス（node_repl.exe など）が
+-- 前面に見えるが、いずれも OpenAI\Codex 配下にある。
+local NEWLINE_INPUT = {
+  { "codex", "\x1b\r" }, -- Alt+Enter
+  { "claude", "\\\r" }, -- "\" + Enter
+  { "copilot", "\\\r" },
+  { "node", "\\\r" }, -- Copilot CLI は node として見える
+}
 wezterm.on("shift-enter", function(window, pane)
-  if NEWLINE_BY_BACKSLASH[process_name(pane)] then
-    pane:send_text("\\\r")
-  else
-    window:perform_action(act.SendKey({ key = "Enter" }), pane)
+  local ok, path = pcall(function()
+    return pane:get_foreground_process_name()
+  end)
+  path = (ok and type(path) == "string") and path:lower() or ""
+  for _, entry in ipairs(NEWLINE_INPUT) do
+    if path:find(entry[1], 1, true) then
+      pane:send_text(entry[2])
+      return
+    end
   end
+  window:perform_action(act.SendKey({ key = "Enter" }), pane)
 end)
 
 local rename_tab = act.PromptInputLine({
