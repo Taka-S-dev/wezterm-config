@@ -530,6 +530,7 @@ config.keys = {
   { key = "O", mods = "CTRL|SHIFT", action = act.EmitEvent("open-bookmark") },
   { key = "L", mods = "CTRL|SHIFT", action = act.ShowDebugOverlay },
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
+  { key = "F11", mods = "NONE", action = act.EmitEvent("toggle-focus-mode") },
   { key = "Enter", mods = "SHIFT", action = act.EmitEvent("shift-enter") },
 
   -- pane移動（Neovimと共存）。Alt+矢印でも同じ
@@ -557,6 +558,7 @@ config.keys = {
   { key = "l", mods = "LEADER", action = act.ActivatePaneDirection("Right") },
   { key = "r", mods = "LEADER", action = act.ActivateKeyTable({ name = "resize_pane", one_shot = false }) },
   { key = "z", mods = "LEADER", action = act.TogglePaneZoomState },
+  { key = "b", mods = "LEADER", action = act.EmitEvent("toggle-tab-bar") },
   { key = "x", mods = "LEADER", action = act.CloseCurrentPane({ confirm = true }) },
   { key = "X", mods = "LEADER|SHIFT", action = act.EmitEvent("close-other-panes") },
   { key = "o", mods = "LEADER", action = act.RotatePanes("Clockwise") },
@@ -672,6 +674,42 @@ wezterm.on("toggle-always-on-top", function(window, pane)
   end
   wezterm.GLOBAL.always_on_top = on
   window:toast_notification("WezTerm", on and "常に最前面: ON" or "常に最前面: OFF", nil, 2000)
+end)
+
+--------------------------------------------------------------------------------
+-- タブバーの表示切り替え（集中したいときに端末の表示だけにする）
+-- ウィンドウの最小化・最大化・閉じるボタンもタブバー内にあるので一緒に隠れる。
+--------------------------------------------------------------------------------
+
+wezterm.on("toggle-tab-bar", function(window, pane)
+  local overrides = window:get_config_overrides() or {}
+  if overrides.enable_tab_bar == false then
+    overrides.enable_tab_bar = nil
+  else
+    overrides.enable_tab_bar = false
+  end
+  window:set_config_overrides(overrides)
+end)
+
+-- 集中モード: タブバーを隠して全画面にする。もう一度で両方戻す。
+-- 入っているかどうかはタブバーの上書きで判断するので、全画面だけ先に
+-- 切り替えてあっても、抜けるときは必ずタブバーが戻る。
+wezterm.on("toggle-focus-mode", function(window, pane)
+  local overrides = window:get_config_overrides() or {}
+  local entering = overrides.enable_tab_bar ~= false
+  if entering then
+    overrides.enable_tab_bar = false
+  else
+    overrides.enable_tab_bar = nil
+  end
+  window:set_config_overrides(overrides)
+  if window:get_dimensions().is_full_screen ~= entering then
+    window:toggle_fullscreen()
+  end
+  -- ウィンドウのボタンもタブバーも消えるので、戻り方を入るときに一度だけ出す
+  if entering then
+    window:toast_notification("WezTerm", "集中モード: F11 で戻る", nil, 2500)
+  end
 end)
 
 --------------------------------------------------------------------------------
@@ -1036,6 +1074,9 @@ local PALETTE_GROUPS = {
       { "スクロールバック全体をクリア", "clear", act.ClearScrollback("ScrollbackAndViewport"), "" },
       { "文字サイズを元に戻す", "reset font", act.ResetFontSize, "Ctrl+0" },
       { "常に最前面を切り替え（Windows）", "always on top", act.EmitEvent("toggle-always-on-top"), "" },
+      { "集中モード（タブバーを隠して全画面）", "focus zen fullscreen", act.EmitEvent("toggle-focus-mode"), "F11" },
+      { "タブバーを隠す / 戻す", "tab bar hide", act.EmitEvent("toggle-tab-bar"), "Ctrl+q b" },
+      { "全画面の切り替え", "fullscreen", act.ToggleFullScreen, "Alt+Enter" },
     },
   },
   {

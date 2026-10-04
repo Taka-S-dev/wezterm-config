@@ -61,6 +61,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `Alt+1`〜`9` | タブ番号で切り替え |
 | `Ctrl+Shift+F` | 画面内を検索 |
 | `Ctrl+Shift+O` | ブックマークのプロジェクトへ移動 |
+| `F11` | 集中モード（タブバーを隠して全画面。もう一度で戻す） |
 | `Shift+Enter` | Claude Code / Copilot CLI / Codex CLI で改行（各 CLI が改行として受け付ける入力に変換） |
 | 右クリック | 貼り付け |
 
@@ -76,6 +77,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `h` `j` `k` `l` | ペイン移動 |
 | `r` | サイズ変更モード（h/j/k/l か矢印、Esc で終了） |
 | `z` | ペイン最大化 / 元に戻す |
+| `b` | タブバーを隠す / 戻す |
 | `x` | ペインを閉じる |
 | `X` | ほかのペインをすべて閉じる（確認あり） |
 | `o` | ペインの配置を回転 |
