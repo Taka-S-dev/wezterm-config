@@ -395,8 +395,14 @@ wezterm.on("show-help", function(window, pane)
   local bold, dim, reset = esc .. "[1;35m", esc .. "[2m", esc .. "[0m"
   local nl = "\r\n"
   local out = { nl .. bold .. " WezTerm 簡易ヘルプ" .. reset .. dim .. "  （全一覧は Ctrl+Shift+P）" .. reset .. nl }
+  -- 日本語のキー名（矢印、右クリック）は 1 文字 2 列なので、バイト数ではなく表示幅で揃える
+  local key_width = 0
   for _, item in ipairs(HELP_LINES) do
-    table.insert(out, string.format("  %s%-14s%s %s%s", bold, item[1], reset, item[2], nl))
+    key_width = math.max(key_width, wezterm.column_width(item[1]))
+  end
+  for _, item in ipairs(HELP_LINES) do
+    local pad = string.rep(" ", key_width - wezterm.column_width(item[1]) + 2)
+    table.insert(out, "  " .. bold .. item[1] .. reset .. pad .. item[2] .. nl)
   end
   table.insert(out, nl)
   pane:inject_output(table.concat(out))
