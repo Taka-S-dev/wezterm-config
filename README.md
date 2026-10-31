@@ -55,6 +55,8 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `Ctrl+Shift+P` | コマンドパレット。迷ったらこれ |
 | `Ctrl+Shift+H` | 簡易ヘルプ |
 | `Ctrl+Shift+T` | 新しいタブ |
+| `Ctrl+Shift+W` | タブを閉じる |
+| `Ctrl+Shift+PageUp` / `PageDown` | タブを左 / 右へ移動 |
 | `Ctrl+Shift+D` | ペインを左右に分割 |
 | `Ctrl+Shift+E` | ペインを上下に分割 |
 | `Alt+矢印` | ペイン移動（クリックでも可） |
@@ -85,6 +87,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `!` | 番号で選んでペインを新しいタブに切り出す |
 | `i` | IDE 風レイアウト（メイン + サブ + 下にターミナル） |
 | `c` / `n` / `p` / `,` | タブの新規 / 次 / 前 / 名前変更 |
+| `<` / `>` | タブを左 / 右へ移動 |
 | `Tab` | 直前のタブに戻る |
 | `w` / `W` | workspace の切り替え / 新規作成 |
 | `s` | シェル / workspace のランチャー |

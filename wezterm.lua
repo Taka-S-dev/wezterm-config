@@ -387,7 +387,7 @@ local HELP_LINES = {
   { "Alt+1〜9", "タブ番号で切り替え" },
   { "Ctrl+Shift+F", "画面内を検索" },
   { "右クリック", "貼り付け（左ドラッグで選択すると自動コピー）" },
-  { "exit", "ペイン / タブを閉じる（タブの × でも可）" },
+  { "Ctrl+Shift+W", "タブを閉じる（ペインは exit、タブの × でも可）" },
 }
 
 wezterm.on("show-help", function(window, pane)
@@ -571,6 +571,8 @@ config.keys = {
   { key = "n", mods = "LEADER", action = act.ActivateTabRelative(1) },
   { key = "p", mods = "LEADER", action = act.ActivateTabRelative(-1) },
   { key = ",", mods = "LEADER", action = rename_tab },
+  { key = "<", mods = "LEADER|SHIFT", action = act.MoveTabRelative(-1) },
+  { key = ">", mods = "LEADER|SHIFT", action = act.MoveTabRelative(1) },
 
   -- workspace（プロジェクトごとの作業空間）
   { key = "w", mods = "LEADER", action = act.ShowLauncherArgs({ flags = "FUZZY|WORKSPACES" }) },
@@ -1051,6 +1053,8 @@ local PALETTE_GROUPS = {
       { "次のタブ", "next tab", act.ActivateTabRelative(1), "Ctrl+Tab" },
       { "前のタブ", "prev tab", act.ActivateTabRelative(-1), "Ctrl+Shift+Tab" },
       { "直前のタブに戻る", "last tab", act.ActivateLastTab, "Ctrl+q Tab" },
+      { "左へ移動", "move tab left", act.MoveTabRelative(-1), "Ctrl+Shift+PageUp" },
+      { "右へ移動", "move tab right", act.MoveTabRelative(1), "Ctrl+Shift+PageDown" },
       { "閉じる", "close tab", act.CloseCurrentTab({ confirm = true }), "Ctrl+Shift+W" },
     },
   },
