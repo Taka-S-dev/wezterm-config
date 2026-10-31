@@ -39,6 +39,15 @@ if ($existing -and $existing.LinkType -eq "SymbolicLink") {
     Write-Host "配置しました: $target"
 }
 
+# WezTerm はコマンドパレットの使用履歴を %APPDATA%\wezterm に保存するが、
+# このフォルダを自分では作らない。無いと保存に毎回失敗し、よく使う項目が
+# 上に並ぶ機能が効かないので、ここで作っておく。
+$dataDir = Join-Path $env:APPDATA "wezterm"
+if (-not (Test-Path $dataDir)) {
+    New-Item -ItemType Directory -Path $dataDir | Out-Null
+    Write-Host "WezTerm の履歴フォルダを作成しました: $dataDir"
+}
+
 # WezTerm 本体と pwsh は無いと起動できない。フォントは見た目だけなので数には入れない。
 $missing = 0
 
