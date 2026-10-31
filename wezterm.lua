@@ -256,16 +256,19 @@ local function basename(cwd)
 end
 
 -- 前面プロセス名（パス・拡張子を除いて小文字化）
+local function short_process_name(path)
+  if type(path) ~= "string" then
+    return ""
+  end
+  local name = path:match("([^/\\]+)$") or path
+  return (name:lower():gsub("%.exe$", ""))
+end
+
 local function process_name(pane)
   local ok, name = pcall(function()
     return pane:get_foreground_process_name()
   end)
-  if not ok or type(name) ~= "string" then
-    return ""
-  end
-  name = name:match("([^/\\]+)$") or name
-  name = name:lower():gsub("%.exe$", "")
-  return name
+  return ok and short_process_name(name) or ""
 end
 
 -- 前面プロセスがNeovimかどうか
@@ -290,8 +293,7 @@ local PROCESS_ICONS = {
   { "docker", wezterm.nerdfonts.md_docker },
 }
 
-local function process_icon(pane)
-  local name = process_name(pane)
+local function process_icon(name)
   for _, entry in ipairs(PROCESS_ICONS) do
     if name:find(entry[1], 1, true) then
       return entry[2]
@@ -304,14 +306,37 @@ end
 -- タブタイトル（VS Codeのように作業ディレクトリ名を出す）
 --------------------------------------------------------------------------------
 
+-- タブの基本の名前: 付けた名前 > 作業ディレクトリ名 > ペインのタイトル
+local function tab_base_title(t)
+  local named = t.tab_title
+  if named and #named > 0 then
+    return named, true
+  end
+  local dir = basename(t.active_pane.current_working_dir)
+  if #dir > 0 then
+    return dir, false
+  end
+  return t.active_pane.title or "shell", false
+end
+
+-- ここで受け取る pane はスナップショット（PaneInformation）なので、メソッドではなく
+-- フィールドから読む。描画のたびに呼ばれるため、プロセス情報の問い合わせはしない。
 wezterm.on("format-tab-title", function(tab, tabs, panes, cfg, hover, max_width)
   local pane = tab.active_pane
-  local title = tab.tab_title
-  if title == nil or #title == 0 then
-    title = basename(pane.current_working_dir)
-  end
-  if #title == 0 then
-    title = pane.title or "shell"
+  local title, named = tab_base_title(tab)
+  local proc = short_process_name(pane.foreground_process_name)
+
+  -- 同じディレクトリのタブが複数あるときは、前面プロセス名を添えて見分けられるようにする
+  if not named and proc ~= "" then
+    local same = 0
+    for _, other in ipairs(tabs) do
+      if tab_base_title(other) == title then
+        same = same + 1
+      end
+    end
+    if same > 1 then
+      title = title .. ":" .. proc
+    end
   end
 
   local zoom = ""
@@ -325,7 +350,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, cfg, hover, max_width)
     unseen = " " .. wezterm.nerdfonts.md_circle_medium
   end
 
-  local text = string.format(" %d %s %s%s%s ", tab.tab_index + 1, process_icon(pane), title, zoom, unseen)
+  local text = string.format(" %d %s %s%s%s ", tab.tab_index + 1, process_icon(proc), title, zoom, unseen)
 
   if tab.is_active then
     return {
@@ -384,6 +409,7 @@ local HELP_LINES = {
   { "Ctrl+Shift+D", "ペインを左右に分割" },
   { "Ctrl+Shift+E", "ペインを上下に分割" },
   { "Alt+矢印", "ペイン移動（クリックでも可）" },
+  { "Ctrl+Tab", "隣のタブへ（Shift で逆方向）" },
   { "Alt+1〜9", "タブ番号で切り替え" },
   { "Ctrl+Shift+F", "画面内を検索" },
   { "右クリック", "貼り付け（左ドラッグで選択すると自動コピー）" },
