@@ -68,7 +68,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 | `Shift+Enter` | Claude Code / Copilot CLI / Codex CLI で改行（各 CLI が改行として受け付ける入力に変換） |
 | 右クリック | 貼り付け |
 
-分割キーに `Alt` を足す（`Ctrl+Shift+Alt+D` など）と、シェルを選んでから分割します。
+新しいタブと分割のキーに `Alt` を足す（`Ctrl+Shift+Alt+T` / `D` / `E`）と、PowerShell 7 / Windows PowerShell / cmd / Git Bash から選んでから開きます。
 
 ### Leader キー（tmux 風）
 

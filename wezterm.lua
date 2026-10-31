@@ -410,6 +410,7 @@ local HELP_LINES = {
   { "Ctrl+Shift+T", "新しいタブ" },
   { "Ctrl+Shift+D", "ペインを左右に分割" },
   { "Ctrl+Shift+E", "ペインを上下に分割" },
+  { "+Alt", "上の 3 つに Alt を足すと、シェルを選んでから開く" },
   { "Alt+矢印", "ペイン移動（クリックでも可）" },
   { "Ctrl+Tab", "隣のタブへ（Shift で逆方向）" },
   { "Alt+1〜9", "タブ番号で切り替え" },
@@ -444,30 +445,27 @@ end)
 -- シェルを選んでペイン分割（launch_menu の一覧から選ぶ）
 --------------------------------------------------------------------------------
 
-local function split_with_shell(direction)
+-- launch_menu のシェル一覧から 1 つ選ばせ、その起動コマンドで make_action を実行する。
+-- 一覧が空なら選ばせずに既定のシェルで実行する。
+local function with_shell_choice(title, make_action)
   return wezterm.action_callback(function(window, pane)
     local choices = {}
     for i, item in ipairs(config.launch_menu) do
       table.insert(choices, { id = tostring(i), label = item.label })
     end
     if #choices == 0 then
-      window:perform_action(act.SplitPane({ direction = direction }), pane)
+      window:perform_action(make_action(nil), pane)
       return
     end
     window:perform_action(
       act.InputSelector({
-        title = "分割先のシェルを選択",
+        title = title,
         choices = choices,
         fuzzy = true,
         action = wezterm.action_callback(function(win, p, id)
-          if not id then
-            return
+          if id then
+            win:perform_action(make_action(config.launch_menu[tonumber(id)].args), p)
           end
-          local item = config.launch_menu[tonumber(id)]
-          win:perform_action(
-            act.SplitPane({ direction = direction, command = { args = item.args } }),
-            p
-          )
         end),
       }),
       pane
@@ -475,11 +473,24 @@ local function split_with_shell(direction)
   end)
 end
 
+local function split_with_shell(direction)
+  return with_shell_choice("分割先のシェルを選択", function(args)
+    return act.SplitPane({ direction = direction, command = args and { args = args } or nil })
+  end)
+end
+
+local new_tab_with_shell = with_shell_choice("新しいタブのシェルを選択", function(args)
+  return act.SpawnCommandInNewTab({ args = args })
+end)
+
 wezterm.on("split-right-shell", function(window, pane)
   window:perform_action(split_with_shell("Right"), pane)
 end)
 wezterm.on("split-down-shell", function(window, pane)
   window:perform_action(split_with_shell("Down"), pane)
+end)
+wezterm.on("new-tab-shell", function(window, pane)
+  window:perform_action(new_tab_with_shell, pane)
 end)
 
 --------------------------------------------------------------------------------
@@ -560,6 +571,7 @@ config.keys = {
   { key = "E", mods = "CTRL|SHIFT", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
   { key = "D", mods = "CTRL|SHIFT|ALT", action = act.EmitEvent("split-right-shell") },
   { key = "E", mods = "CTRL|SHIFT|ALT", action = act.EmitEvent("split-down-shell") },
+  { key = "T", mods = "CTRL|SHIFT|ALT", action = act.EmitEvent("new-tab-shell") },
   { key = "F", mods = "CTRL|SHIFT", action = act.Search({ CaseInSensitiveString = "" }) },
   { key = "O", mods = "CTRL|SHIFT", action = act.EmitEvent("open-bookmark") },
   { key = "L", mods = "CTRL|SHIFT", action = act.ShowDebugOverlay },
@@ -1083,6 +1095,7 @@ local PALETTE_GROUPS = {
     key = "tab", label = "タブ操作", icon = "md_tab",
     items = {
       { "新しいタブ", "new tab", act.SpawnTab("CurrentPaneDomain"), "Ctrl+Shift+T" },
+      { "シェルを選んで新しいタブ", "new tab shell", act.EmitEvent("new-tab-shell"), "Ctrl+Shift+Alt+T" },
       { "名前を変更", "rename tab", rename_tab, "Ctrl+q ," },
       { "次のタブ", "next tab", act.ActivateTabRelative(1), "Ctrl+Tab" },
       { "前のタブ", "prev tab", act.ActivateTabRelative(-1), "Ctrl+Shift+Tab" },
@@ -1098,7 +1111,7 @@ local PALETTE_GROUPS = {
       { "ブックマークのプロジェクトへ移動", "project bookmark", act.EmitEvent("open-bookmark"), "Ctrl+Shift+O" },
       { "いまのディレクトリをブックマークに追加", "add bookmark", act.EmitEvent("add-bookmark"), "" },
       { "ブックマークから削除", "remove bookmark", act.EmitEvent("remove-bookmark"), "" },
-      { "シェルを選んで新しいタブで起動", "launcher shell", launcher, "Ctrl+q s" },
+      { "ランチャー（シェル / workspace / SSH 接続先）", "launcher", launcher, "Ctrl+q s" },
       { "新しい workspace を作る", "new workspace", new_workspace, "Ctrl+q W" },
       { "workspace を切り替え", "switch workspace", act.ShowLauncherArgs({ flags = "FUZZY|WORKSPACES" }), "Ctrl+q w" },
     },
