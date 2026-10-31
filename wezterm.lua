@@ -1257,6 +1257,13 @@ wezterm.on("bell", function(window, pane)
   if active and active:pane_id() == pane:pane_id() and window:is_focused() then
     return
   end
+  -- 連続して鳴るベル（TUI のエラー音など）で通知が連打されないよう、ペインごとに間を空ける
+  local key = "bell_" .. tostring(pane:pane_id())
+  local now = os.time()
+  if (wezterm.GLOBAL[key] or 0) + 3 > now then
+    return
+  end
+  wezterm.GLOBAL[key] = now
   local title = basename(pane:get_current_working_dir())
   if #title == 0 then
     title = pane:get_title()
