@@ -225,7 +225,9 @@ config.allow_win32_input_mode = true
 -- フルスクリーンの TUI で日本語入力が丸ごと落ちる。IME を使う間は無効にしておく。
 config.enable_kitty_keyboard = false
 
-config.window_close_confirmation = "NeverPrompt"
+-- シェルしか動いていなければ確認なしで閉じ、Neovim や CLI エージェントなどが
+-- 動いているときだけ確認を出す（下の一覧が「確認を省くプロセス」）
+config.window_close_confirmation = "AlwaysPrompt"
 config.skip_close_confirmation_for_processes_named = {
   "pwsh.exe", "powershell.exe", "cmd.exe", "bash.exe", "zsh", "fish", "sh",
 }
