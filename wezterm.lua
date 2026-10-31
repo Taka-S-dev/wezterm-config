@@ -452,7 +452,7 @@ end)
 -- キーバインド
 --------------------------------------------------------------------------------
 
-config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 1000 }
+config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }
 
 -- Alt+hjkl でNeovimの分割とWezTermのpaneをシームレスに行き来する。
 -- 前面がNeovimならキーをそのまま渡し、そうでなければpane移動に使う。

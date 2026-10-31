@@ -71,7 +71,7 @@ Windows / PowerShell / Neovim 向けの [WezTerm](https://wezfurlong.org/wezterm
 
 ### Leader キー（tmux 風）
 
-`Ctrl+q` を押してから 1 秒以内に次のキーを押します。慣れるまでは不要です。
+`Ctrl+q` を押してから 2 秒以内に次のキーを押します。慣れるまでは不要です。
 
 | キー | 動作 |
 |---|---|
